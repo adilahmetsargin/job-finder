@@ -1,17 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  AlertCircle,
-  Brain,
-  CheckCircle2,
-  Download,
-  FileText,
-  Loader2,
-  Plus,
-  Sparkles,
-  Trash2,
-  Upload
-} from 'lucide-react';
+import { AlertCircle, Brain, Download, FileText, Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import './styles.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8787';
@@ -109,7 +98,7 @@ function App() {
         <div className="topbar">
           <div>
             <p className="eyebrow">Resume Tailor MVP</p>
-            <h1>ATS odakli resume guncelleme</h1>
+            <h1>ATS-focused resume tailoring</h1>
           </div>
           <div className="statusPill">
             <Brain size={16} />
@@ -125,23 +114,23 @@ function App() {
               onChange={(event) => setFile(event.target.files?.[0] || null)}
             />
             <span className="uploadIcon"><Upload size={22} /></span>
-            <span className="uploadTitle">{file ? file.name : 'PDF resume yukle'}</span>
-            <span className="uploadMeta">Text tabanli PDF en iyi sonucu verir</span>
+            <span className="uploadTitle">{file ? file.name : 'Upload resume PDF'}</span>
+            <span className="uploadMeta">Text-based PDFs work best</span>
           </label>
 
           <label className="field">
-            <span>Ilan aciklamasi</span>
+            <span>Job description</span>
             <textarea
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
-              placeholder="Job description, requirements, nice-to-have teknolojiler..."
+              placeholder="Job description, requirements, nice-to-have technologies..."
               rows={9}
             />
           </label>
 
           <button className="primaryButton" type="submit" disabled={!canTailor}>
             {isTailoring ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
-            Resume guncelle
+            Tailor resume
           </button>
         </form>
 
@@ -152,8 +141,8 @@ function App() {
           <section className="resultPanel">
             <div className="resultHeader">
               <div>
-                <p className="eyebrow">Manuel edit modu</p>
-                <h2>PDF almadan once son dokunuslar</h2>
+                <p className="eyebrow">Manual edit mode</p>
+                <h2>Final edits before PDF export</h2>
               </div>
               <div className="score">
                 <span>{matchScore}%</span>
@@ -165,11 +154,11 @@ function App() {
 
             <div className="actionBar">
               <button className="secondaryButton" type="button" onClick={() => setResume(null)}>
-                Sifirla
+                Reset
               </button>
               <button className="primaryButton" type="button" onClick={handleExport} disabled={isExporting}>
                 {isExporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
-                PDF indir
+                Download PDF
               </button>
             </div>
           </section>
@@ -186,10 +175,10 @@ function ResumeEditor({ resume, onChange }) {
     <div className="editorGrid">
       <div className="card">
         <h3><FileText size={17} /> Header</h3>
-        <TextInput label="Ad soyad" value={resume.name} onChange={(value) => update('name', value)} />
-        <TextInput label="Baslik" value={resume.headline} onChange={(value) => update('headline', value)} />
-        <TextInput label="Iletisim" value={resume.contact} onChange={(value) => update('contact', value)} />
-        <TextArea label="Ozet" value={resume.summary} onChange={(value) => update('summary', value)} rows={5} />
+        <TextInput label="Full name" value={resume.name} onChange={(value) => update('name', value)} />
+        <TextInput label="Headline" value={resume.headline} onChange={(value) => update('headline', value)} />
+        <TextInput label="Contact" value={resume.contact} onChange={(value) => update('contact', value)} />
+        <TextArea label="Summary" value={resume.summary} onChange={(value) => update('summary', value)} rows={5} />
       </div>
 
       <ListEditor
@@ -238,14 +227,14 @@ function ExperienceEditor({ items, onChange }) {
           <button className="iconButton danger" type="button" onClick={() => removeItem(index)} aria-label="Remove experience">
             <Trash2 size={16} />
           </button>
-          <TextInput label="Rol" value={item.role} onChange={(value) => updateItem(index, { ...item, role: value })} />
-          <TextInput label="Sirket" value={item.company} onChange={(value) => updateItem(index, { ...item, company: value })} />
-          <TextInput label="Tarih" value={item.dates} onChange={(value) => updateItem(index, { ...item, dates: value })} />
+          <TextInput label="Role" value={item.role} onChange={(value) => updateItem(index, { ...item, role: value })} />
+          <TextInput label="Company" value={item.company} onChange={(value) => updateItem(index, { ...item, company: value })} />
+          <TextInput label="Dates" value={item.dates} onChange={(value) => updateItem(index, { ...item, dates: value })} />
           <ListEditor
-            title="Bulletlar"
+            title="Bullets"
             compact
             items={item.bullets || []}
-            placeholder="Impact odakli bullet"
+            placeholder="Impact-focused bullet"
             onChange={(bullets) => updateItem(index, { ...item, bullets })}
           />
         </div>
@@ -266,10 +255,10 @@ function ProjectEditor({ items, onChange }) {
           <button className="iconButton danger" type="button" onClick={() => removeItem(index)} aria-label="Remove project">
             <Trash2 size={16} />
           </button>
-          <TextInput label="Proje" value={item.name} onChange={(value) => updateItem(index, { ...item, name: value })} />
-          <TextArea label="Aciklama" value={item.description} onChange={(value) => updateItem(index, { ...item, description: value })} rows={3} />
+          <TextInput label="Project" value={item.name} onChange={(value) => updateItem(index, { ...item, name: value })} />
+          <TextArea label="Description" value={item.description} onChange={(value) => updateItem(index, { ...item, description: value })} rows={3} />
           <ListEditor
-            title="Bulletlar"
+            title="Bullets"
             compact
             items={item.bullets || []}
             placeholder="Project impact"

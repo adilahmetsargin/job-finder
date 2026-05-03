@@ -5,7 +5,7 @@ export function normalizeTailoredResume(input = {}, fallback = {}) {
   return {
     name: clean(source.name) || clean(base.name) || '',
     headline: chooseHeadline(source.headline, base.headline),
-    contact: chooseLonger(source.contact, base.contact),
+    contact: FIXED_CONTACT,
     summary: clean(source.summary) || clean(base.summary) || '',
     skills: mergeStrings(source.skills, base.skills),
     experience: normalizeExperience(source.experience, base.experience),
@@ -14,6 +14,8 @@ export function normalizeTailoredResume(input = {}, fallback = {}) {
     atsNotes: mergeStrings(source.atsNotes, base.atsNotes)
   };
 }
+
+const FIXED_CONTACT = 'adilahmetsargin@gmail.com | https://www.linkedin.com/in/adilahmetsargin/ | https://github.com/adilahmetsargin';
 
 function normalizeExperience(primary, fallback) {
   const items = Array.isArray(primary) && primary.length ? primary : fallback;
