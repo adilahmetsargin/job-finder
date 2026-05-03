@@ -7,6 +7,7 @@ import { HfInference } from '@huggingface/inference';
 import { extractPdfText } from './extractPdfText.js';
 import { tailorResumeFallback } from './tailorFallback.js';
 import { normalizeTailoredResume } from './normalizeResume.js';
+import { enhanceTailoredResume } from './enhanceResume.js';
 import { renderResumePdf } from './renderResumePdf.js';
 
 const app = express();
@@ -52,7 +53,11 @@ app.post('/api/tailor', upload.single('resume'), async (req, res) => {
 
     const aiResult = await tailorWithHuggingFace(resumeText, jobDescription);
     const fallback = tailorResumeFallback(resumeText, jobDescription);
-    const tailored = normalizeTailoredResume(aiResult?.resume || fallback, fallback);
+    const tailored = enhanceTailoredResume(
+      normalizeTailoredResume(aiResult?.resume || fallback, fallback),
+      fallback,
+      jobDescription
+    );
 
     res.json({
       source: aiResult?.source || 'fallback',
@@ -146,8 +151,11 @@ You are an ATS resume optimization assistant.
 
 Rules:
 - Do not invent employers, dates, degrees, certifications, or seniority.
-- You may reframe existing experience toward the job description.
-- You may add technologies from the job description only when plausibly connected to existing experience.
+- Aggressively rewrite the candidate's existing bullets toward the job description.
+- Add job technologies into bullets when they are plausibly connected to the existing work, such as API integrations, dashboards, frontend architecture, authentication, performance, cloud deployment, or cross-functional engineering delivery.
+- If the job is Full Stack and the resume is Frontend-heavy, convert the headline and relevant frontend bullets toward Full Stack by emphasizing React/Next.js + Node.js/REST API integration, data layer collaboration, cloud readiness, and end-to-end feature ownership.
+- Do not merely copy original bullets. Every experience item should contain job-aligned keywords and stronger impact language.
+- Preserve original metrics and scope, but attach them to the target stack where truthful. Example: "React.js applications serving 1M+ users" may become "React.js/Next.js front ends integrated with REST/Node.js API patterns serving 1M+ users" if the resume mentions APIs or Node.js elsewhere.
 - Keep the result truthful, concise, and interview-ready.
 - Return only valid JSON. No markdown.
 
