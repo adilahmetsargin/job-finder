@@ -30,7 +30,7 @@ app.get('/api/health', (_req, res) => {
     model: getHfModel(),
     provider: getHfProvider(),
     jobProviders: {
-      public: ['Remotive', 'Arbeitnow', 'RemoteJobs.org', 'Greenhouse'],
+      public: ['Remotive', 'Arbeitnow', 'RemoteJobs.org', 'Greenhouse', 'Lever', 'Ashby'],
       configured: [
         process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY ? 'Adzuna' : null,
         process.env.USAJOBS_API_KEY && process.env.USAJOBS_USER_AGENT ? 'USAJOBS' : null
@@ -45,7 +45,9 @@ app.get('/api/jobs', async (req, res) => {
       query: req.query.query,
       page: req.query.page,
       pageSize: req.query.pageSize,
-      hours: req.query.hours
+      hours: req.query.hours,
+      workplace: req.query.workplace,
+      source: req.query.source
     });
 
     res.json(result);

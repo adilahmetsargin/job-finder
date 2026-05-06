@@ -27,7 +27,11 @@ ADZUNA_APP_KEY=your_adzuna_app_key
 USAJOBS_API_KEY=your_usajobs_api_key
 USAJOBS_USER_AGENT=your_email@example.com
 GREENHOUSE_BOARDS=figma,openai,anthropic,stripe,reddit
+LEVER_COMPANIES=netlify,webflow,postman,brex,datadog
+ASHBY_BOARDS=anthropic,cursor,linear,perplexity,ramp
 ```
+
+`GREENHOUSE_BOARDS`, `LEVER_COMPANIES`, and `ASHBY_BOARDS` are comma-separated company board slugs. If you leave them empty, the app uses a built-in starter list.
 
 After Render deploys, copy the service URL, for example:
 

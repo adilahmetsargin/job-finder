@@ -209,6 +209,9 @@ function App() {
 
 function JobFeed({ onUseJob }) {
   const [query, setQuery] = useState('frontend react developer');
+  const [hours, setHours] = useState('24');
+  const [workplace, setWorkplace] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [jobsData, setJobsData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -223,7 +226,9 @@ function JobFeed({ onUseJob }) {
         query,
         page: String(nextPage),
         pageSize: '12',
-        hours: '24'
+        hours,
+        workplace,
+        source: sourceFilter
       });
       const response = await fetch(`${API_URL}/api/jobs?${params}`);
       const payload = await response.json();
@@ -241,7 +246,7 @@ function JobFeed({ onUseJob }) {
     <section className="jobPanel">
       <div className="jobHeader">
         <div>
-          <p className="eyebrow">Last 24 hours</p>
+          <p className="eyebrow">Fresh listings</p>
           <h2>US and remote tech job feed</h2>
         </div>
         <span className="statusPill">
@@ -254,6 +259,29 @@ function JobFeed({ onUseJob }) {
         <label className="field">
           <span>Search keywords</span>
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="frontend react developer" />
+        </label>
+        <label className="field compactField">
+          <span>Posted</span>
+          <select value={hours} onChange={(event) => setHours(event.target.value)}>
+            <option value="24">Last 24h</option>
+            <option value="72">Last 3 days</option>
+            <option value="168">Last 7 days</option>
+          </select>
+        </label>
+        <label className="field compactField">
+          <span>Workplace</span>
+          <select value={workplace} onChange={(event) => setWorkplace(event.target.value)}>
+            <option value="all">US + remote</option>
+            <option value="remote">Remote only</option>
+            <option value="onsite">US on-site/hybrid</option>
+          </select>
+        </label>
+        <label className="field compactField">
+          <span>Source</span>
+          <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+            <option value="all">All sources</option>
+            {JOB_SOURCES.map((source) => <option value={source} key={source}>{source}</option>)}
+          </select>
         </label>
         <button className="primaryButton" type="button" onClick={() => fetchJobs(1)} disabled={isLoading}>
           {isLoading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
@@ -546,5 +574,7 @@ const ATS_KEYWORDS = [
   'DevSecOps', 'Playwright', 'Cypress', 'Figma', 'Python', 'Full Stack',
   'Frontend', 'Backend', 'API', 'Microservices', 'Agile', 'Redux'
 ];
+
+const JOB_SOURCES = ['Remotive', 'Arbeitnow', 'RemoteJobs.org', 'Greenhouse', 'Lever', 'Ashby', 'Adzuna', 'USAJOBS'];
 
 createRoot(document.getElementById('root')).render(<App />);
