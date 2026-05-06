@@ -1,4 +1,5 @@
 let pdfjsModule;
+const nativeImport = new Function('specifier', 'return import(specifier)');
 
 export async function extractPdfText(buffer) {
   const pdfjs = await loadPdfJs();
@@ -21,7 +22,7 @@ export async function extractPdfText(buffer) {
 
 async function loadPdfJs() {
   if (!pdfjsModule) {
-    pdfjsModule = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    pdfjsModule = await nativeImport('pdfjs-dist/legacy/build/pdf.mjs');
   }
 
   return pdfjsModule;
