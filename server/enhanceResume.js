@@ -8,15 +8,16 @@ const TARGET_KEYWORDS = [
 export function enhanceTailoredResume(resume, fallback, jobDescription) {
   const jobKeywords = detectTargetKeywords(jobDescription);
   const shouldTargetFullStack = hasKeyword(jobDescription, 'full stack') || hasKeyword(jobDescription, 'node.js');
-
-  return {
+  const enhanced = {
     ...resume,
     headline: shouldTargetFullStack ? strengthenHeadline(resume.headline) : resume.headline,
     summary: strengthenSummary(resume.summary, jobKeywords, shouldTargetFullStack),
     skills: mergeSkills(resume.skills, jobKeywords, fallback.skills),
-    experience: strengthenExperience(resume.experience, jobKeywords),
+    experience: strengthenExperience(resume.experience, jobKeywords, shouldTargetFullStack),
     atsNotes: mergeNotes(resume.atsNotes, jobKeywords)
   };
+
+  return shouldTargetFullStack ? applyFullStackConsistency(enhanced) : enhanced;
 }
 
 function strengthenHeadline(headline = '') {
@@ -26,7 +27,7 @@ function strengthenHeadline(headline = '') {
 }
 
 function strengthenSummary(summary = '', jobKeywords, shouldTargetFullStack) {
-  const text = clean(summary);
+  const text = shouldTargetFullStack ? rewriteFrontendIdentity(clean(summary)) : clean(summary);
   const stack = jobKeywords.filter((keyword) => /React|Next\.js|Node\.js|Python|AWS|PostgreSQL|DynamoDB|LLM|AI|RAG/i.test(keyword)).slice(0, 8);
   const prefix = shouldTargetFullStack
     ? `Full Stack Developer with production experience across React.js, Next.js, Node.js/API integrations, and high-traffic web platforms.`
@@ -38,20 +39,20 @@ function strengthenSummary(summary = '', jobKeywords, shouldTargetFullStack) {
   return [prefix, text, keywordSentence].filter(Boolean).join(' ');
 }
 
-function strengthenExperience(items = [], jobKeywords) {
+function strengthenExperience(items = [], jobKeywords, shouldTargetFullStack) {
   return items.map((item) => {
     const context = `${item.role || ''} ${item.company || ''}`;
-    const bullets = (item.bullets || []).map((bullet, index) => rewriteExperienceBullet(bullet, context, index, jobKeywords));
+    const bullets = (item.bullets || []).map((bullet, index) => rewriteExperienceBullet(bullet, context, index, jobKeywords, shouldTargetFullStack));
     return {
       ...item,
-      role: targetRole(item.role),
+      role: shouldTargetFullStack ? targetRole(item.role) : item.role,
       bullets: dedupeBullets(bullets).slice(0, 5)
     };
   });
 }
 
-function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywords = []) {
-  const text = clean(bullet);
+function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywords = [], shouldTargetFullStack = false) {
+  const text = shouldTargetFullStack ? rewriteFrontendIdentity(clean(bullet)) : clean(bullet);
   const lower = `${context} ${text}`.toLowerCase();
   const needsNode = includesAny(jobKeywords, ['Node.js', 'REST', 'API']);
   const needsCloud = includesAny(jobKeywords, ['AWS', 'DynamoDB', 'PostgreSQL']);
@@ -137,10 +138,43 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
 }
 
 function targetRole(role = '') {
-  if (/frontend/i.test(role)) return role.replace(/frontend/i, 'Full Stack');
   if (/senior frontend/i.test(role)) return role.replace(/senior frontend/i, 'Senior Full Stack');
+  if (/frontend/i.test(role)) return role.replace(/frontend/i, 'Full Stack');
   if (/software developer/i.test(role) && !/full stack/i.test(role)) return role.replace(/software developer/i, 'Full Stack Developer');
   return role;
+}
+
+function applyFullStackConsistency(resume) {
+  return {
+    ...resume,
+    headline: rewriteFrontendIdentity(resume.headline),
+    summary: rewriteFrontendIdentity(resume.summary),
+    experience: (resume.experience || []).map((item) => ({
+      ...item,
+      role: targetRole(rewriteFrontendIdentity(item.role)),
+      bullets: (item.bullets || []).map(rewriteFrontendIdentity)
+    })),
+    projects: (resume.projects || []).map((project) => ({
+      ...project,
+      description: rewriteFrontendIdentity(project.description),
+      bullets: (project.bullets || []).map(rewriteFrontendIdentity)
+    }))
+  };
+}
+
+function rewriteFrontendIdentity(text = '') {
+  return clean(text)
+    .replace(/\bSenior Frontend Engineer\b/gi, 'Senior Full Stack Developer')
+    .replace(/\bSenior Frontend Developer\b/gi, 'Senior Full Stack Developer')
+    .replace(/\bFrontend Engineer\b/gi, 'Full Stack Developer')
+    .replace(/\bFrontend Developer\b/gi, 'Full Stack Developer')
+    .replace(/\bfrontend initiatives\b/gi, 'full-stack web initiatives')
+    .replace(/\bfrontend delivery\b/gi, 'full-stack feature delivery')
+    .replace(/\bfrontend solutions\b/gi, 'full-stack web solutions')
+    .replace(/\bfrontend architecture\b/gi, 'full-stack web architecture')
+    .replace(/\bfrontend systems\b/gi, 'full-stack web systems')
+    .replace(/\bfrontend behavior\b/gi, 'full-stack web behavior')
+    .replace(/\bfrontend\b(?! and API integration)/gi, 'frontend and API integration');
 }
 
 function appendIfMissing(base, additions) {

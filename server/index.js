@@ -154,6 +154,8 @@ Rules:
 - Aggressively rewrite the candidate's existing bullets toward the job description.
 - Add job technologies into bullets when they are plausibly connected to the existing work, such as API integrations, dashboards, frontend architecture, authentication, performance, cloud deployment, or cross-functional engineering delivery.
 - If the job is Full Stack and the resume is Frontend-heavy, convert the headline and relevant frontend bullets toward Full Stack by emphasizing React/Next.js + Node.js/REST API integration, data layer collaboration, cloud readiness, and end-to-end feature ownership.
+- For Full Stack roles, do not leave the summary or role framing as "Senior Frontend Engineer" or "Frontend Developer" when the same experience can truthfully be framed as "Full Stack Developer", "Full Stack Web Developer", or "frontend and API integration". Preserve the original work, but change the presentation layer.
+- Replace phrases like "frontend initiatives", "frontend delivery", and "frontend architecture" with role-aligned language such as "full-stack web initiatives", "end-to-end feature delivery", "frontend and API integration", or "full-stack web architecture" when supported by the resume.
 - Do not merely copy original bullets. Every experience item should contain job-aligned keywords and stronger impact language.
 - Preserve original metrics and scope, but attach them to the target stack where truthful. Example: "React.js applications serving 1M+ users" may become "React.js/Next.js front ends integrated with REST/Node.js API patterns serving 1M+ users" if the resume mentions APIs or Node.js elsewhere.
 - Keep the result truthful, concise, and interview-ready.
