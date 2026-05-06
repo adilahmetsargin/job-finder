@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   AlertCircle,
@@ -7,10 +7,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   ExternalLink,
   FileText,
   Loader2,
+  Mail,
+  MessageSquare,
   Plus,
   Search,
   Sparkles,
@@ -192,6 +195,8 @@ function App() {
             </div>
 
             <AtsPanel report={atsReport} />
+
+            <OutreachKit resume={resume} jobDescription={jobDescription} />
 
             <ResumeEditor resume={resume} onChange={setResume} />
 
@@ -395,6 +400,82 @@ function AtsPanel({ report }) {
         </div>
       )}
     </section>
+  );
+}
+
+function OutreachKit({ resume, jobDescription }) {
+  const generated = useMemo(() => buildOutreachDrafts(resume, jobDescription), [resume, jobDescription]);
+  const [drafts, setDrafts] = useState(generated);
+  const [copied, setCopied] = useState('');
+
+  useEffect(() => {
+    setDrafts(generated);
+    setCopied('');
+  }, [generated]);
+
+  function updateDraft(key, value) {
+    setDrafts((current) => ({ ...current, [key]: value }));
+  }
+
+  async function copyDraft(key) {
+    await navigator.clipboard.writeText(drafts[key]);
+    setCopied(key);
+    window.setTimeout(() => setCopied(''), 1600);
+  }
+
+  return (
+    <section className="outreachPanel">
+      <div className="atsHeader">
+        <div>
+          <p className="eyebrow">Outreach kit</p>
+          <h3><MessageSquare size={17} /> Application messages</h3>
+        </div>
+        <span className="fitPill neutral">Editable</span>
+      </div>
+
+      <div className="outreachGrid">
+        <OutreachDraft
+          icon={<FileText size={16} />}
+          title="Cover letter"
+          value={drafts.coverLetter}
+          copied={copied === 'coverLetter'}
+          onChange={(value) => updateDraft('coverLetter', value)}
+          onCopy={() => copyDraft('coverLetter')}
+        />
+        <OutreachDraft
+          icon={<MessageSquare size={16} />}
+          title="LinkedIn message"
+          value={drafts.linkedinMessage}
+          copied={copied === 'linkedinMessage'}
+          onChange={(value) => updateDraft('linkedinMessage', value)}
+          onCopy={() => copyDraft('linkedinMessage')}
+        />
+        <OutreachDraft
+          icon={<Mail size={16} />}
+          title="Email template"
+          value={drafts.emailTemplate}
+          copied={copied === 'emailTemplate'}
+          onChange={(value) => updateDraft('emailTemplate', value)}
+          onCopy={() => copyDraft('emailTemplate')}
+          wide
+        />
+      </div>
+    </section>
+  );
+}
+
+function OutreachDraft({ icon, title, value, copied, onChange, onCopy, wide = false }) {
+  return (
+    <div className={wide ? 'outreachDraft wide' : 'outreachDraft'}>
+      <div className="outreachTitle">
+        <h3>{icon}{title}</h3>
+        <button className="secondaryButton compactButton" type="button" onClick={onCopy}>
+          <Copy size={15} />
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <textarea value={value} rows={wide ? 8 : 7} onChange={(event) => onChange(event.target.value)} />
+    </div>
   );
 }
 
@@ -602,6 +683,88 @@ function buildJobDescription(job) {
 function formatDate(value) {
   if (!value) return 'Date unknown';
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric' }).format(new Date(value));
+}
+
+function buildOutreachDrafts(resume, jobDescription) {
+  const job = parseJobContext(jobDescription);
+  const name = cleanKeyword(resume?.name) || 'Adil Ahmet Sargin';
+  const headline = cleanKeyword(resume?.headline) || 'Software Engineer';
+  const summary = cleanSentence(resume?.summary) || `I am a ${headline} focused on building reliable, user-centered web applications.`;
+  const topSkills = uniqueKeywords([...(resume?.skills || []), ...extractJobKeywords(jobDescription)]).slice(0, 6);
+  const strongestBullet = findStrongestBullet(resume) || 'I have shipped production web applications with measurable product and performance impact.';
+  const company = job.company || 'your team';
+  const role = job.title || 'this role';
+  const skillLine = topSkills.length ? topSkills.join(', ') : 'React, TypeScript, and scalable web application delivery';
+
+  const coverLetter = [
+    `Dear Hiring Team,`,
+    '',
+    `I am excited to apply for the ${role} position${job.company ? ` at ${company}` : ''}. ${summary}`,
+    '',
+    `What stood out to me about this opportunity is the focus on ${skillLine}. My background maps well to that need: ${strongestBullet}`,
+    '',
+    `I would welcome the chance to discuss how I can help ${company} ship high-quality software, improve user experience, and contribute quickly across the product lifecycle.`,
+    '',
+    `Best,`,
+    name
+  ].join('\n');
+
+  const linkedinMessage = [
+    `Hi, I saw the ${role} opening${job.company ? ` at ${company}` : ''} and wanted to reach out directly.`,
+    `My background is in ${headline}, with hands-on experience across ${skillLine}. ${strongestBullet}`,
+    `I would love to be considered and am happy to share more context.`
+  ].join('\n\n');
+
+  const emailTemplate = [
+    `Subject: Application for ${role}${job.company ? ` - ${name}` : ''}`,
+    '',
+    `Hi Hiring Team,`,
+    '',
+    `I just applied for the ${role} role${job.company ? ` at ${company}` : ''} and wanted to share a quick note. ${summary}`,
+    '',
+    `A few areas that align with the role: ${skillLine}. One relevant example from my experience: ${strongestBullet}`,
+    '',
+    `I attached my tailored resume and would appreciate the opportunity to speak with the team.`,
+    '',
+    `Best,`,
+    name,
+    resume?.contact || 'adilahmetsargin@gmail.com | https://www.linkedin.com/in/adilahmetsargin/ | https://github.com/adilahmetsargin'
+  ].join('\n');
+
+  return { coverLetter, linkedinMessage, emailTemplate };
+}
+
+function parseJobContext(jobDescription = '') {
+  const firstLine = cleanKeyword(String(jobDescription).split('\n').find(Boolean));
+  const titleCompany = firstLine?.match(/^(.+?)\s+-\s+(.+)$/);
+  const titleMatch = jobDescription.match(/\b(?:senior|staff|lead|principal)?\s*(?:full stack|frontend|front-end|backend|software|web|react|javascript|typescript|node\.?js)\s+(?:developer|engineer|architect)\b/i);
+  const companyMatch = jobDescription.match(/\b(?:at|company|organization|about)\s*:?\s*([A-Z][A-Za-z0-9&.\- ]{2,40})/);
+
+  return {
+    title: cleanKeyword(titleCompany?.[1] || titleMatch?.[0] || ''),
+    company: cleanKeyword(titleCompany?.[2] || companyMatch?.[1] || '')
+  };
+}
+
+function findStrongestBullet(resume) {
+  const bullets = [
+    ...(resume?.experience || []).flatMap((item) => item.bullets || []),
+    ...(resume?.projects || []).flatMap((item) => item.bullets || [])
+  ].map(cleanSentence).filter(Boolean);
+  return bullets.sort((a, b) => scoreBullet(b) - scoreBullet(a))[0] || '';
+}
+
+function scoreBullet(value) {
+  const text = String(value || '');
+  const metricScore = (text.match(/\d+|%|\bmillion\b|\busers\b|\bperformance\b|\bscale\b/gi) || []).length * 3;
+  const actionScore = /\b(shipped|built|led|improved|optimized|designed|implemented|migrated|launched)\b/i.test(text) ? 4 : 0;
+  return metricScore + actionScore + Math.min(6, text.length / 45);
+}
+
+function cleanSentence(value) {
+  const text = cleanKeyword(value);
+  if (!text) return '';
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 function analyzeAtsFit(resume, jobDescription) {

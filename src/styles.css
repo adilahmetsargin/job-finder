@@ -594,6 +594,49 @@ textarea:focus {
   line-height: 1.4;
 }
 
+.outreachPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 13px;
+}
+
+.outreachGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.outreachDraft {
+  display: grid;
+  gap: 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 11px;
+}
+
+.outreachTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compactButton {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.outreachDraft textarea {
+  min-height: 170px;
+  font-size: 13px;
+}
+
 .editorGrid {
   display: grid;
   gap: 12px;
@@ -694,7 +737,8 @@ textarea:focus {
 @media (max-width: 640px) {
   .atsHeader,
   .atsMetrics,
-  .atsColumns {
+  .atsColumns,
+  .outreachGrid {
     grid-template-columns: 1fr;
   }
 
