@@ -4,6 +4,7 @@ import {
   AlertCircle,
   Brain,
   Briefcase,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -13,6 +14,7 @@ import {
   Plus,
   Search,
   Sparkles,
+  Target,
   Trash2,
   Upload
 } from 'lucide-react';
@@ -44,7 +46,7 @@ function App() {
   const [error, setError] = useState('');
 
   const canTailor = Boolean(file && jobDescription.trim() && !isTailoring);
-  const matchScore = useMemo(() => calculateScore(resume, jobDescription), [resume, jobDescription]);
+  const atsReport = useMemo(() => analyzeAtsFit(resume, jobDescription), [resume, jobDescription]);
 
   async function handleTailor(event) {
     event.preventDefault();
@@ -184,10 +186,12 @@ function App() {
                 <h2>Final edits before PDF export</h2>
               </div>
               <div className="score">
-                <span>{matchScore}%</span>
+                <span>{atsReport.score}%</span>
                 <small>keyword match</small>
               </div>
             </div>
+
+            <AtsPanel report={atsReport} />
 
             <ResumeEditor resume={resume} onChange={setResume} />
 
@@ -357,6 +361,67 @@ function JobFeed({ onUseJob }) {
         </>
       )}
     </section>
+  );
+}
+
+function AtsPanel({ report }) {
+  return (
+    <section className="atsPanel">
+      <div className="atsHeader">
+        <div>
+          <p className="eyebrow">ATS score panel</p>
+          <h3><Target size={17} /> Resume fit analysis</h3>
+        </div>
+        <span className={`fitPill ${report.gradeTone}`}>{report.grade}</span>
+      </div>
+
+      <div className="atsMetrics">
+        <MetricCard label="Keyword coverage" value={`${report.score}%`} detail={`${report.matched.length}/${report.totalKeywords} matched`} />
+        <MetricCard label="Title alignment" value={report.titleAligned ? 'Strong' : 'Review'} detail={report.titleAligned ? 'Headline matches the role' : 'Tune headline for the job title'} />
+        <MetricCard label="Experience signals" value={`${report.experienceHits}`} detail="Relevant bullets found" />
+      </div>
+
+      <div className="atsColumns">
+        <KeywordBlock title="Matched keywords" tone="good" items={report.matched} emptyText="No direct keyword matches yet." />
+        <KeywordBlock title="Missing keywords" tone="warn" items={report.missing} emptyText="No major keyword gaps found." />
+      </div>
+
+      {report.actions.length > 0 && (
+        <div className="atsActions">
+          <h3><CheckCircle2 size={17} /> Suggested fixes</h3>
+          <ul>
+            {report.actions.map((action) => <li key={action}>{action}</li>)}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MetricCard({ label, value, detail }) {
+  return (
+    <div className="metricCard">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  );
+}
+
+function KeywordBlock({ title, tone, items, emptyText }) {
+  const visible = items.slice(0, 18);
+
+  return (
+    <div className="keywordBlock">
+      <h3>{title}</h3>
+      {visible.length > 0 ? (
+        <div className="tagRow">
+          {visible.map((keyword) => <span className={`tag ${tone}`} key={keyword}>{keyword}</span>)}
+        </div>
+      ) : (
+        <p className="emptyText">{emptyText}</p>
+      )}
+    </div>
   );
 }
 
@@ -539,15 +604,114 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric' }).format(new Date(value));
 }
 
-function calculateScore(resume, jobDescription) {
-  if (!resume || !jobDescription.trim()) return 0;
-  const important = ATS_KEYWORDS
-    .filter((keyword) => containsKeyword(jobDescription, keyword))
-    .map((keyword) => keyword.toLowerCase());
-  if (!important.length) return 0;
-  const resumeText = JSON.stringify(resume).toLowerCase();
-  const hits = important.filter((word) => containsKeyword(resumeText, word)).length;
-  return Math.min(100, Math.round((hits / important.length) * 100));
+function analyzeAtsFit(resume, jobDescription) {
+  if (!resume || !jobDescription.trim()) {
+    return {
+      score: 0,
+      grade: 'Needs input',
+      gradeTone: 'warn',
+      matched: [],
+      missing: [],
+      totalKeywords: 0,
+      titleAligned: false,
+      experienceHits: 0,
+      actions: ['Upload a resume and add a job description to generate an ATS analysis.']
+    };
+  }
+
+  const jobKeywords = extractJobKeywords(jobDescription);
+  const resumeText = resumeToText(resume);
+  const matched = jobKeywords.filter((keyword) => containsKeyword(resumeText, keyword));
+  const missing = jobKeywords.filter((keyword) => !containsKeyword(resumeText, keyword));
+  const titleAligned = hasTitleAlignment(resume, jobDescription);
+  const summaryAligned = sectionHasKeywords(resume.summary, jobKeywords, 2);
+  const experienceHits = countExperienceHits(resume.experience, jobKeywords);
+  const keywordScore = jobKeywords.length ? matched.length / jobKeywords.length : 0;
+  const titleBonus = titleAligned ? 0.12 : 0;
+  const summaryBonus = summaryAligned ? 0.08 : 0;
+  const experienceBonus = Math.min(0.15, experienceHits * 0.025);
+  const score = Math.min(100, Math.round((keywordScore * 0.65 + titleBonus + summaryBonus + experienceBonus) * 100));
+  const actions = buildAtsActions({ missing, titleAligned, summaryAligned, experienceHits });
+
+  return {
+    score,
+    grade: score >= 80 ? 'Strong fit' : score >= 60 ? 'Good start' : 'Needs tuning',
+    gradeTone: score >= 80 ? 'good' : score >= 60 ? 'neutral' : 'warn',
+    matched,
+    missing,
+    totalKeywords: jobKeywords.length,
+    titleAligned,
+    experienceHits,
+    actions
+  };
+}
+
+function extractJobKeywords(jobDescription) {
+  const explicit = ATS_KEYWORDS.filter((keyword) => containsKeyword(jobDescription, keyword));
+  const phrases = Array.from(jobDescription.matchAll(/\b(?:senior|staff|lead|principal)?\s*(?:full stack|frontend|front-end|backend|software|web|react|javascript|typescript|node\.?js)\s+(?:developer|engineer|architect)\b/gi))
+    .map((match) => cleanKeyword(match[0]))
+    .filter(Boolean);
+  return uniqueKeywords([...phrases, ...explicit]).slice(0, 36);
+}
+
+function resumeToText(resume) {
+  return [
+    resume.name,
+    resume.headline,
+    resume.contact,
+    resume.summary,
+    ...(resume.skills || []),
+    ...(resume.education || []),
+    ...(resume.atsNotes || []),
+    ...(resume.experience || []).flatMap((item) => [item.role, item.company, item.dates, ...(item.bullets || [])]),
+    ...(resume.projects || []).flatMap((item) => [item.name, item.description, ...(item.bullets || [])])
+  ].filter(Boolean).join(' ');
+}
+
+function hasTitleAlignment(resume, jobDescription) {
+  const titleTerms = extractJobKeywords(jobDescription)
+    .filter((keyword) => /developer|engineer|architect|frontend|front-end|full stack|backend|react|javascript|typescript|web/i.test(keyword));
+  const headline = `${resume.headline || ''} ${(resume.experience || []).map((item) => item.role).join(' ')}`;
+  return titleTerms.length ? titleTerms.some((keyword) => containsKeyword(headline, keyword)) : Boolean(resume.headline);
+}
+
+function sectionHasKeywords(text, keywords, minimum) {
+  const hits = keywords.filter((keyword) => containsKeyword(text || '', keyword)).length;
+  return hits >= Math.min(minimum, keywords.length);
+}
+
+function countExperienceHits(experience = [], keywords = []) {
+  return experience.reduce((count, item) => {
+    const text = [item.role, ...(item.bullets || [])].join(' ');
+    return count + keywords.filter((keyword) => containsKeyword(text, keyword)).slice(0, 3).length;
+  }, 0);
+}
+
+function buildAtsActions({ missing, titleAligned, summaryAligned, experienceHits }) {
+  const actions = [];
+  if (!titleAligned) actions.push('Align the headline with the job title or closest truthful target role.');
+  if (!summaryAligned) actions.push('Add 2-3 high-priority role keywords to the professional summary.');
+  if (missing.length) actions.push(`Review missing keywords: ${missing.slice(0, 6).join(', ')}.`);
+  if (experienceHits < 4) actions.push('Work relevant keywords into existing experience bullets with measurable outcomes.');
+  if (!actions.length) actions.push('Looks solid. Do a final truth check before exporting the PDF.');
+  return actions;
+}
+
+function uniqueKeywords(keywords) {
+  const seen = new Set();
+  return keywords
+    .map(cleanKeyword)
+    .filter(Boolean)
+    .filter((keyword) => {
+      const key = keyword.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function cleanKeyword(keyword) {
+  return String(keyword || '').replace(/\s+/g, ' ').trim();
 }
 
 function containsKeyword(text, keyword) {

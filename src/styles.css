@@ -477,6 +477,123 @@ textarea:focus {
   color: #64748b;
 }
 
+.atsPanel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 13px;
+}
+
+.atsHeader,
+.atsMetrics,
+.atsColumns {
+  display: grid;
+  gap: 10px;
+}
+
+.atsHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.fitPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.fitPill.good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.fitPill.neutral {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.fitPill.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.atsMetrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metricCard,
+.keywordBlock,
+.atsActions {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 11px;
+}
+
+.metricCard {
+  display: grid;
+  gap: 4px;
+}
+
+.metricCard span,
+.metricCard small,
+.emptyText {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.metricCard strong {
+  color: #111827;
+  font-size: 20px;
+}
+
+.atsColumns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.keywordBlock {
+  display: grid;
+  gap: 9px;
+}
+
+.tag.good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tag.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.emptyText {
+  margin: 0;
+}
+
+.atsActions {
+  display: grid;
+  gap: 8px;
+}
+
+.atsActions ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .editorGrid {
   display: grid;
   gap: 12px;
@@ -575,6 +692,12 @@ textarea:focus {
 }
 
 @media (max-width: 640px) {
+  .atsHeader,
+  .atsMetrics,
+  .atsColumns {
+    grid-template-columns: 1fr;
+  }
+
   .jobHeader,
   .jobControls,
   .jobActions,
