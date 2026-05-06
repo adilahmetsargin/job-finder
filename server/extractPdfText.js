@@ -1,6 +1,7 @@
-import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+let pdfjsModule;
 
 export async function extractPdfText(buffer) {
+  const pdfjs = await loadPdfJs();
   const data = new Uint8Array(buffer);
   const document = await pdfjs.getDocument({
     data,
@@ -16,6 +17,14 @@ export async function extractPdfText(buffer) {
   }
 
   return normalizePdfArtifacts(pages.join('\n\n'));
+}
+
+async function loadPdfJs() {
+  if (!pdfjsModule) {
+    pdfjsModule = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  }
+
+  return pdfjsModule;
 }
 
 function groupTextItemsByLine(items) {
