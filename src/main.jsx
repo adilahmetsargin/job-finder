@@ -1,6 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AlertCircle, Brain, Download, FileText, Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  Brain,
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  Upload
+} from 'lucide-react';
 import './styles.css';
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8787' : '');
@@ -18,6 +33,7 @@ const emptyResume = {
 };
 
 function App() {
+  const [activeView, setActiveView] = useState('tailor');
   const [file, setFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
   const [resume, setResume] = useState(null);
@@ -106,38 +122,61 @@ function App() {
           </div>
         </div>
 
-        <form className="inputPanel" onSubmit={handleTailor}>
-          <label className="uploadBox">
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(event) => setFile(event.target.files?.[0] || null)}
-            />
-            <span className="uploadIcon"><Upload size={22} /></span>
-            <span className="uploadTitle">{file ? file.name : 'Upload resume PDF'}</span>
-            <span className="uploadMeta">Text-based PDFs work best</span>
-          </label>
-
-          <label className="field">
-            <span>Job description</span>
-            <textarea
-              value={jobDescription}
-              onChange={(event) => setJobDescription(event.target.value)}
-              placeholder="Job description, requirements, nice-to-have technologies..."
-              rows={9}
-            />
-          </label>
-
-          <button className="primaryButton" type="submit" disabled={!canTailor}>
-            {isTailoring ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
-            Tailor resume
+        <div className="navTabs">
+          <button className={activeView === 'tailor' ? 'tabButton active' : 'tabButton'} type="button" onClick={() => setActiveView('tailor')}>
+            <FileText size={16} />
+            Resume Tailor
           </button>
-        </form>
+          <button className={activeView === 'jobs' ? 'tabButton active' : 'tabButton'} type="button" onClick={() => setActiveView('jobs')}>
+            <Briefcase size={16} />
+            Job Feed
+          </button>
+        </div>
+
+        {activeView === 'tailor' && (
+          <form className="inputPanel" onSubmit={handleTailor}>
+            <label className="uploadBox">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(event) => setFile(event.target.files?.[0] || null)}
+              />
+              <span className="uploadIcon"><Upload size={22} /></span>
+              <span className="uploadTitle">{file ? file.name : 'Upload resume PDF'}</span>
+              <span className="uploadMeta">Text-based PDFs work best</span>
+            </label>
+
+            <label className="field">
+              <span>Job description</span>
+              <textarea
+                value={jobDescription}
+                onChange={(event) => setJobDescription(event.target.value)}
+                placeholder="Job description, requirements, nice-to-have technologies..."
+                rows={9}
+              />
+            </label>
+
+            <button className="primaryButton" type="submit" disabled={!canTailor}>
+              {isTailoring ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
+              Tailor resume
+            </button>
+          </form>
+        )}
+
+        {activeView === 'jobs' && (
+          <JobFeed
+            onUseJob={(description) => {
+              setJobDescription(description);
+              setActiveView('tailor');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
 
         {error && <Notice tone="error" icon={<AlertCircle size={18} />} text={error} />}
         {warning && <Notice tone="warn" icon={<AlertCircle size={18} />} text={warning} />}
 
-        {resume && (
+        {activeView === 'tailor' && resume && (
           <section className="resultPanel">
             <div className="resultHeader">
               <div>
@@ -165,6 +204,131 @@ function App() {
         )}
       </section>
     </main>
+  );
+}
+
+function JobFeed({ onUseJob }) {
+  const [query, setQuery] = useState('frontend react developer');
+  const [page, setPage] = useState(1);
+  const [jobsData, setJobsData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function fetchJobs(nextPage = 1) {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const params = new URLSearchParams({
+        query,
+        page: String(nextPage),
+        pageSize: '12',
+        hours: '24'
+      });
+      const response = await fetch(`${API_URL}/api/jobs?${params}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Job search failed.');
+      setJobsData(payload);
+      setPage(nextPage);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <section className="jobPanel">
+      <div className="jobHeader">
+        <div>
+          <p className="eyebrow">Last 24 hours</p>
+          <h2>US and remote tech job feed</h2>
+        </div>
+        <span className="statusPill">
+          <Search size={16} />
+          {jobsData ? `${jobsData.total} matches` : 'Ready'}
+        </span>
+      </div>
+
+      <div className="jobControls">
+        <label className="field">
+          <span>Search keywords</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="frontend react developer" />
+        </label>
+        <button className="primaryButton" type="button" onClick={() => fetchJobs(1)} disabled={isLoading}>
+          {isLoading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
+          Search jobs
+        </button>
+      </div>
+
+      {error && <Notice tone="error" icon={<AlertCircle size={18} />} text={error} />}
+
+      {jobsData?.sources?.errors?.length > 0 && (
+        <Notice
+          tone="warn"
+          icon={<AlertCircle size={18} />}
+          text={`Some sources failed: ${jobsData.sources.errors.map((item) => item.source).join(', ')}`}
+        />
+      )}
+
+      {jobsData && (
+        <>
+          <div className="sourceRow">
+            {(jobsData.sources.active || []).map((source) => <span className="badge" key={source}>{source}</span>)}
+          </div>
+
+          <div className="jobGrid">
+            {jobsData.jobs.map((job) => (
+              <article className="jobCard" key={job.id}>
+                <div className="jobCardTop">
+                  <span className="badge">{job.source}</span>
+                  <span className="jobDate">{formatDate(job.postedAt)}</span>
+                </div>
+                <h3>{job.title}</h3>
+                <p className="company">{job.company}</p>
+                <p className="jobMeta">{job.remote ? 'Remote' : 'On-site / Hybrid'} · {job.location}</p>
+                <p className="jobDescription">{job.description || 'Open the job post for full details.'}</p>
+                <div className="tagRow">
+                  {(job.tags || []).slice(0, 5).map((tag) => <span className="tag" key={tag}>{tag}</span>)}
+                </div>
+                <div className="jobActions">
+                  <button className="secondaryButton" type="button" onClick={() => onUseJob(buildJobDescription(job))}>
+                    Use for resume
+                  </button>
+                  <a className="linkButton" href={job.url} target="_blank" rel="noreferrer">
+                    Open <ExternalLink size={14} />
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="pagination">
+            <button className="secondaryButton" type="button" onClick={() => fetchJobs(page - 1)} disabled={isLoading || page <= 1}>
+              <ChevronLeft size={16} />
+              Previous
+            </button>
+            <span>Page {jobsData.page} of {jobsData.totalPages}</span>
+            <button className="secondaryButton" type="button" onClick={() => fetchJobs(page + 1)} disabled={isLoading || page >= jobsData.totalPages}>
+              Next
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="externalPanel">
+            <h3>Search more sources</h3>
+            <div className="externalGrid">
+              {(jobsData.sources.externalSearches || []).map((source) => (
+                <a href={source.url} target="_blank" rel="noreferrer" key={source.source}>
+                  {source.source}
+                  <ExternalLink size={14} />
+                </a>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -327,6 +491,24 @@ function Notice({ tone, icon, text }) {
       <span>{text}</span>
     </div>
   );
+}
+
+function buildJobDescription(job) {
+  return [
+    `${job.title} - ${job.company}`,
+    `Source: ${job.source}`,
+    `Location: ${job.location}`,
+    `Remote: ${job.remote ? 'Yes' : 'No / unclear'}`,
+    '',
+    job.description,
+    '',
+    `Apply URL: ${job.url}`
+  ].filter(Boolean).join('\n');
+}
+
+function formatDate(value) {
+  if (!value) return 'Date unknown';
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric' }).format(new Date(value));
 }
 
 function calculateScore(resume, jobDescription) {

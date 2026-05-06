@@ -19,6 +19,15 @@ HF_MODEL=meta-llama/Llama-3.1-8B-Instruct
 HF_PROVIDER=novita
 ```
 
+Optional job provider variables:
+
+```text
+ADZUNA_APP_ID=your_adzuna_app_id
+ADZUNA_APP_KEY=your_adzuna_app_key
+USAJOBS_API_KEY=your_usajobs_api_key
+USAJOBS_USER_AGENT=your_email@example.com
+```
+
 After Render deploys, copy the service URL, for example:
 
 ```text

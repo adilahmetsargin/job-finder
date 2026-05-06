@@ -9,6 +9,7 @@ import { tailorResumeFallback } from './tailorFallback.js';
 import { normalizeTailoredResume } from './normalizeResume.js';
 import { enhanceTailoredResume } from './enhanceResume.js';
 import { renderResumePdf } from './renderResumePdf.js';
+import { searchJobs } from './jobProviders.js';
 
 const app = express();
 const upload = multer({
@@ -27,8 +28,34 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     aiConfigured: Boolean(process.env.HF_TOKEN),
     model: getHfModel(),
-    provider: getHfProvider()
+    provider: getHfProvider(),
+    jobProviders: {
+      public: ['Remotive', 'Arbeitnow', 'RemoteJobs.org'],
+      configured: [
+        process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY ? 'Adzuna' : null,
+        process.env.USAJOBS_API_KEY && process.env.USAJOBS_USER_AGENT ? 'USAJOBS' : null
+      ].filter(Boolean)
+    }
   });
+});
+
+app.get('/api/jobs', async (req, res) => {
+  try {
+    const result = await searchJobs({
+      query: req.query.query,
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+      hours: req.query.hours
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: 'Job search failed.',
+      detail: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 app.post('/api/tailor', upload.single('resume'), async (req, res) => {
