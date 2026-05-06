@@ -7,31 +7,30 @@ const TARGET_KEYWORDS = [
 
 export function enhanceTailoredResume(resume, fallback, jobDescription) {
   const jobKeywords = detectTargetKeywords(jobDescription);
-  const shouldTargetFullStack = hasKeyword(jobDescription, 'full stack') || hasKeyword(jobDescription, 'node.js');
+  const profile = inferTargetProfile(jobDescription);
   const enhanced = {
     ...resume,
-    headline: shouldTargetFullStack ? strengthenHeadline(resume.headline) : resume.headline,
-    summary: strengthenSummary(resume.summary, jobKeywords, shouldTargetFullStack),
+    headline: strengthenHeadline(resume.headline, profile),
+    summary: strengthenSummary(resume.summary, jobKeywords, profile),
     skills: mergeSkills(resume.skills, jobKeywords, fallback.skills),
-    experience: strengthenExperience(resume.experience, jobKeywords, shouldTargetFullStack),
+    experience: strengthenExperience(resume.experience, jobKeywords, profile),
     atsNotes: mergeNotes(resume.atsNotes, jobKeywords)
   };
 
-  return shouldTargetFullStack ? applyFullStackConsistency(enhanced) : enhanced;
+  return applyTargetConsistency(enhanced, profile);
 }
 
-function strengthenHeadline(headline = '') {
-  if (/full stack/i.test(headline)) return headline;
-  if (/senior/i.test(headline)) return 'Senior Full Stack Developer';
-  return 'Full Stack Developer';
+function strengthenHeadline(headline = '', profile) {
+  const source = clean(headline);
+  if (source && hasKeyword(source, profile.title)) return source;
+  if (/senior/i.test(source)) return `Senior ${profile.title}`;
+  return profile.title;
 }
 
-function strengthenSummary(summary = '', jobKeywords, shouldTargetFullStack) {
-  const text = shouldTargetFullStack ? rewriteFrontendIdentity(clean(summary)) : clean(summary);
+function strengthenSummary(summary = '', jobKeywords, profile) {
+  const text = rewriteRoleIdentity(clean(summary), profile);
   const stack = jobKeywords.filter((keyword) => /React|Next\.js|Node\.js|Python|AWS|PostgreSQL|DynamoDB|LLM|AI|RAG/i.test(keyword)).slice(0, 8);
-  const prefix = shouldTargetFullStack
-    ? `Full Stack Developer with production experience across React.js, Next.js, Node.js/API integrations, and high-traffic web platforms.`
-    : '';
+  const prefix = `${profile.title} with production experience across ${profile.scope}.`;
   const keywordSentence = stack.length
     ? `Positioned for this role around ${stack.join(', ')} while preserving the candidate's original project scope and impact.`
     : '';
@@ -39,20 +38,20 @@ function strengthenSummary(summary = '', jobKeywords, shouldTargetFullStack) {
   return [prefix, text, keywordSentence].filter(Boolean).join(' ');
 }
 
-function strengthenExperience(items = [], jobKeywords, shouldTargetFullStack) {
+function strengthenExperience(items = [], jobKeywords, profile) {
   return items.map((item) => {
     const context = `${item.role || ''} ${item.company || ''}`;
-    const bullets = (item.bullets || []).map((bullet, index) => rewriteExperienceBullet(bullet, context, index, jobKeywords, shouldTargetFullStack));
+    const bullets = (item.bullets || []).map((bullet, index) => rewriteExperienceBullet(bullet, context, index, jobKeywords, profile));
     return {
       ...item,
-      role: shouldTargetFullStack ? targetRole(item.role) : item.role,
+      role: targetRole(item.role, profile),
       bullets: dedupeBullets(bullets).slice(0, 5)
     };
   });
 }
 
-function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywords = [], shouldTargetFullStack = false) {
-  const text = shouldTargetFullStack ? rewriteFrontendIdentity(clean(bullet)) : clean(bullet);
+function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywords = [], profile) {
+  const text = rewriteRoleIdentity(clean(bullet), profile);
   const lower = `${context} ${text}`.toLowerCase();
   const needsNode = includesAny(jobKeywords, ['Node.js', 'REST', 'API']);
   const needsCloud = includesAny(jobKeywords, ['AWS', 'DynamoDB', 'PostgreSQL']);
@@ -61,9 +60,9 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
 
   if (/1m\+|production-grade|high-traffic|istanbul/i.test(text)) {
     return appendIfMissing(
-      text.replace(/frontend/i, 'full-stack frontend'),
+      rewriteRoleIdentity(text, profile),
       [
-        needsNode && 'React.js/Next.js UI, reusable components, and REST/Node.js API integration patterns',
+        needsNode && profile.apiIntegration,
         needsCloud && 'AWS-ready data and deployment workflows',
         '1M+ user scale'
       ]
@@ -72,7 +71,7 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
 
   if (/dashboard|real-time data|visibility/i.test(text)) {
     return appendIfMissing(text, [
-      needsNode && 'React.js and Node.js-backed data flows',
+      needsNode && `${profile.stackLabel} and Node.js-backed data flows`,
       needsCloud && 'cloud-hosted reporting/data-store readiness',
       'production observability and operational efficiency'
     ]);
@@ -88,9 +87,9 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
 
   if (/performance|render|re-render|optimization/i.test(text)) {
     return appendIfMissing(text, [
-      'React.js/Next.js rendering performance',
+      `${profile.stackLabel} rendering performance`,
       'responsive and accessible UI delivery',
-      includesAny(jobKeywords, ['Playwright']) && 'testable frontend behavior'
+      includesAny(jobKeywords, ['Playwright']) && `testable ${profile.productNoun} behavior`
     ]);
   }
 
@@ -114,7 +113,7 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
     return appendIfMissing(text, [
       'peer code review',
       'AI-assisted code validation readiness',
-      'engineering standards across React/Next.js codebases'
+      `engineering standards across ${profile.stackLabel} codebases`
     ]);
   }
 
@@ -128,7 +127,7 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
 
   if (index === 0) {
     return appendIfMissing(text, [
-      needsNode && 'React/Next.js front end through REST/Node.js API integration',
+      needsNode && profile.apiIntegration,
       needsCloud && 'AWS-ready architecture',
       needsAi && 'LLM/AI feature awareness'
     ]);
@@ -137,44 +136,191 @@ function rewriteExperienceBullet(bullet = '', context = '', index = 0, jobKeywor
   return text;
 }
 
-function targetRole(role = '') {
-  if (/senior frontend/i.test(role)) return role.replace(/senior frontend/i, 'Senior Full Stack');
-  if (/frontend/i.test(role)) return role.replace(/frontend/i, 'Full Stack');
-  if (/software developer/i.test(role) && !/full stack/i.test(role)) return role.replace(/software developer/i, 'Full Stack Developer');
-  return role;
+function targetRole(role = '', profile) {
+  const cleanRole = clean(role);
+  if (!cleanRole) return profile.title;
+  if (profile.kind === 'frontend' && /frontend/i.test(cleanRole)) return cleanRole;
+  if (/senior frontend (engineer|developer)/i.test(cleanRole)) return `Senior ${profile.title}`;
+  if (/frontend (engineer|developer)/i.test(cleanRole)) return profile.title;
+  if (/software developer/i.test(cleanRole) && /developer/i.test(profile.title)) return cleanRole.replace(/software developer/i, profile.title);
+  return rewriteRoleIdentity(cleanRole, profile);
 }
 
-function applyFullStackConsistency(resume) {
+function applyTargetConsistency(resume, profile) {
   return {
     ...resume,
-    headline: rewriteFrontendIdentity(resume.headline),
-    summary: rewriteFrontendIdentity(resume.summary),
+    headline: rewriteRoleIdentity(resume.headline, profile),
+    summary: rewriteRoleIdentity(resume.summary, profile),
     experience: (resume.experience || []).map((item) => ({
       ...item,
-      role: targetRole(rewriteFrontendIdentity(item.role)),
-      bullets: (item.bullets || []).map(rewriteFrontendIdentity)
+      role: targetRole(item.role, profile),
+      bullets: (item.bullets || []).map((bullet) => rewriteRoleIdentity(bullet, profile))
     })),
     projects: (resume.projects || []).map((project) => ({
       ...project,
-      description: rewriteFrontendIdentity(project.description),
-      bullets: (project.bullets || []).map(rewriteFrontendIdentity)
+      description: rewriteRoleIdentity(project.description, profile),
+      bullets: (project.bullets || []).map((bullet) => rewriteRoleIdentity(bullet, profile))
     }))
   };
 }
 
-function rewriteFrontendIdentity(text = '') {
+function rewriteRoleIdentity(text = '', profile) {
+  if (profile.kind === 'frontend') return clean(text);
+
   return clean(text)
-    .replace(/\bSenior Frontend Engineer\b/gi, 'Senior Full Stack Developer')
-    .replace(/\bSenior Frontend Developer\b/gi, 'Senior Full Stack Developer')
-    .replace(/\bFrontend Engineer\b/gi, 'Full Stack Developer')
-    .replace(/\bFrontend Developer\b/gi, 'Full Stack Developer')
-    .replace(/\bfrontend initiatives\b/gi, 'full-stack web initiatives')
-    .replace(/\bfrontend delivery\b/gi, 'full-stack feature delivery')
-    .replace(/\bfrontend solutions\b/gi, 'full-stack web solutions')
-    .replace(/\bfrontend architecture\b/gi, 'full-stack web architecture')
-    .replace(/\bfrontend systems\b/gi, 'full-stack web systems')
-    .replace(/\bfrontend behavior\b/gi, 'full-stack web behavior')
-    .replace(/\bfrontend\b(?! and API integration)/gi, 'frontend and API integration');
+    .replace(/\bSenior Frontend Engineer\b/gi, `Senior ${profile.title}`)
+    .replace(/\bSenior Frontend Developer\b/gi, `Senior ${profile.title}`)
+    .replace(/\bFrontend Engineer\b/gi, profile.title)
+    .replace(/\bFrontend Developer\b/gi, profile.title)
+    .replace(/\bfrontend initiatives\b/gi, profile.initiatives)
+    .replace(/\bfrontend delivery\b/gi, profile.delivery)
+    .replace(/\bfrontend solutions\b/gi, profile.solutions)
+    .replace(/\bfrontend architecture\b/gi, profile.architecture)
+    .replace(/\bfrontend systems\b/gi, profile.systems)
+    .replace(/\bfrontend behavior\b/gi, `${profile.productNoun} behavior`)
+    .replace(/\bfrontend\b(?! and API integration)/gi, profile.frontendReference);
+}
+
+function inferTargetProfile(jobDescription = '') {
+  const text = clean(jobDescription);
+  const explicitTitle = extractExplicitTitle(text);
+  const lowerTitle = explicitTitle.toLowerCase();
+
+  if (/full[\s-]?stack/.test(lowerTitle) || hasKeyword(text, 'full stack')) {
+    return makeProfile('fullstack', explicitTitle || 'Full Stack Developer');
+  }
+
+  if (/react/.test(lowerTitle) || (!explicitTitle && hasKeyword(text, 'React') && !/full[\s-]?stack/i.test(text))) {
+    return makeProfile('react', explicitTitle || 'React Developer');
+  }
+
+  if (/javascript|js developer/.test(lowerTitle) || (!explicitTitle && hasKeyword(text, 'JavaScript'))) {
+    return makeProfile('javascript', explicitTitle || 'JavaScript Developer');
+  }
+
+  if (/software engineer/.test(lowerTitle) || hasKeyword(text, 'Software Engineer')) {
+    return makeProfile('software', explicitTitle || 'Software Engineer');
+  }
+
+  if (/web developer|web engineer/.test(lowerTitle) || hasKeyword(text, 'Web Developer')) {
+    return makeProfile('web', explicitTitle || 'Web Developer');
+  }
+
+  if (/backend|back-end/.test(lowerTitle) || (!explicitTitle && hasKeyword(text, 'Backend'))) {
+    return makeProfile('backend', explicitTitle || 'Backend Developer');
+  }
+
+  if (/frontend|front-end/.test(lowerTitle) || (!explicitTitle && hasKeyword(text, 'Frontend'))) {
+    return makeProfile('frontend', explicitTitle || 'Frontend Developer');
+  }
+
+  return makeProfile('software', explicitTitle || 'Software Developer');
+}
+
+function extractExplicitTitle(text) {
+  const titlePattern = /(?:^|\n|\btitle:\s*|\brole:\s*|\bposition:\s*)(Senior\s+)?((?:Full[\s-]?Stack|Software|React|JavaScript|Node\.js|Web|Frontend|Front-End|Backend|Back-End)\s+(?:Developer|Engineer))/i;
+  const match = text.match(titlePattern);
+  if (!match) return '';
+  return toTitleCase(`${match[1] || ''}${match[2] || ''}`);
+}
+
+function makeProfile(kind, title) {
+  const normalizedTitle = normalizeTitle(title);
+  const shared = {
+    kind,
+    title: normalizedTitle,
+    stackLabel: 'React.js/Next.js',
+    productNoun: 'web application',
+    apiIntegration: 'React.js/Next.js UI, reusable components, and REST/Node.js API integration patterns'
+  };
+
+  const profiles = {
+    fullstack: {
+      scope: 'React.js, Next.js, Node.js/API integrations, and high-traffic web platforms',
+      initiatives: 'full-stack web initiatives',
+      delivery: 'full-stack feature delivery',
+      solutions: 'full-stack web solutions',
+      architecture: 'full-stack web architecture',
+      systems: 'full-stack web systems',
+      frontendReference: 'frontend and API integration'
+    },
+    software: {
+      scope: 'JavaScript/TypeScript, React.js, scalable web applications, API integration, and production engineering practices',
+      initiatives: 'software engineering initiatives',
+      delivery: 'end-to-end feature delivery',
+      solutions: 'software solutions',
+      architecture: 'web application architecture',
+      systems: 'production web systems',
+      frontendReference: 'web application'
+    },
+    react: {
+      scope: 'React.js, Next.js, TypeScript, reusable component architecture, and high-performance web interfaces',
+      initiatives: 'React application initiatives',
+      delivery: 'React feature delivery',
+      solutions: 'React web solutions',
+      architecture: 'React application architecture',
+      systems: 'React web systems',
+      frontendReference: 'React application'
+    },
+    javascript: {
+      scope: 'JavaScript/TypeScript, React.js, Next.js, REST API integrations, and browser-based application delivery',
+      initiatives: 'JavaScript application initiatives',
+      delivery: 'JavaScript feature delivery',
+      solutions: 'JavaScript web solutions',
+      architecture: 'JavaScript application architecture',
+      systems: 'JavaScript web systems',
+      frontendReference: 'JavaScript web application'
+    },
+    web: {
+      scope: 'responsive web applications, React.js/Next.js interfaces, API integrations, and production web performance',
+      initiatives: 'web application initiatives',
+      delivery: 'web feature delivery',
+      solutions: 'web application solutions',
+      architecture: 'web application architecture',
+      systems: 'web application systems',
+      frontendReference: 'web application'
+    },
+    backend: {
+      scope: 'API integrations, Node.js service collaboration, authentication flows, data workflows, and scalable web systems',
+      initiatives: 'backend integration initiatives',
+      delivery: 'API feature delivery',
+      solutions: 'API-integrated solutions',
+      architecture: 'API integration architecture',
+      systems: 'backend-integrated web systems',
+      frontendReference: 'API-integrated web'
+    },
+    frontend: {
+      scope: 'React.js, Next.js, TypeScript, reusable component architecture, and high-performance user interfaces',
+      initiatives: 'frontend initiatives',
+      delivery: 'frontend delivery',
+      solutions: 'frontend solutions',
+      architecture: 'frontend architecture',
+      systems: 'frontend systems',
+      frontendReference: 'frontend'
+    }
+  };
+
+  return { ...shared, ...(profiles[kind] || profiles.software) };
+}
+
+function normalizeTitle(title) {
+  const cleaned = clean(title)
+    .replace(/front-end/gi, 'Frontend')
+    .replace(/back-end/gi, 'Backend')
+    .replace(/full-stack/gi, 'Full Stack')
+    .replace(/\bJs\b/g, 'JS');
+  return toTitleCase(cleaned || 'Software Developer')
+    .replace(/\bReact\b/i, 'React')
+    .replace(/\bJavascript\b/i, 'JavaScript')
+    .replace(/\bNode\.Js\b/i, 'Node.js');
+}
+
+function toTitleCase(value) {
+  return clean(value).replace(/\w\S*/g, (word) => {
+    if (/^(API|UI|UX|JS)$/i.test(word)) return word.toUpperCase();
+    if (/^Node\.js$/i.test(word)) return 'Node.js';
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
 }
 
 function appendIfMissing(base, additions) {
