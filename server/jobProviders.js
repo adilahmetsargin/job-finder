@@ -1,5 +1,29 @@
 const DEFAULT_QUERY = 'frontend react javascript developer';
 const TECH_QUERY_HINTS = ['frontend', 'front-end', 'react', 'javascript', 'typescript', 'next.js', 'web developer', 'software engineer'];
+const DEFAULT_GREENHOUSE_BOARDS = [
+  'airbnb',
+  'anthropic',
+  'asana',
+  'benchling',
+  'box',
+  'chime',
+  'cloudflare',
+  'coinbase',
+  'doordashusa',
+  'figma',
+  'gitlab',
+  'gusto',
+  'instacart',
+  'notion',
+  'openai',
+  'ramp',
+  'reddit',
+  'robinhood',
+  'scaleai',
+  'stripe',
+  'twitch',
+  'zapier'
+];
 
 export async function searchJobs({ query = DEFAULT_QUERY, page = 1, pageSize = 12, hours = 24 } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
@@ -12,6 +36,7 @@ export async function searchJobs({ query = DEFAULT_QUERY, page = 1, pageSize = 1
     ['Remotive', () => fetchRemotive(searchQuery)],
     ['Arbeitnow', () => fetchArbeitnow()],
     ['RemoteJobs.org', () => fetchRemoteJobs(searchQuery)],
+    ['Greenhouse', () => fetchGreenhouseBoards()],
     ['Adzuna', () => fetchAdzuna(searchQuery, safePage)],
     ['USAJOBS', () => fetchUsaJobs(searchQuery, safePage)]
   ];
@@ -109,6 +134,37 @@ async function fetchRemoteJobs(query) {
     description: stripHtml(job.description || job.summary),
     tags: job.tags || job.skills || []
   }));
+}
+
+async function fetchGreenhouseBoards() {
+  const boards = getGreenhouseBoards();
+  const settled = await Promise.allSettled(boards.map(fetchGreenhouseBoard));
+  return settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []);
+}
+
+async function fetchGreenhouseBoard(boardToken) {
+  const url = new URL(`https://boards-api.greenhouse.io/v1/boards/${boardToken}/jobs`);
+  url.searchParams.set('content', 'true');
+  const data = await getJson(url);
+  return (data.jobs || []).map((job) => {
+    const offices = Array.isArray(job.offices) ? job.offices : [];
+    const departments = Array.isArray(job.departments) ? job.departments : [];
+    const location = clean(job.location?.name)
+      || offices.map((office) => clean(office.location || office.name)).filter(Boolean).join(', ');
+
+    return normalizeJob({
+      source: 'Greenhouse',
+      id: `greenhouse-${boardToken}-${job.id}`,
+      title: job.title,
+      company: toCompanyName(boardToken),
+      location,
+      remote: /remote|distributed|anywhere/i.test(`${job.title} ${location} ${job.content}`),
+      url: job.absolute_url,
+      postedAt: job.updated_at,
+      description: stripHtml(job.content),
+      tags: departments.map((department) => department.name).filter(Boolean)
+    });
+  });
 }
 
 async function fetchAdzuna(query, page) {
@@ -250,7 +306,8 @@ function buildExternalSearches(query) {
     { source: 'Dice', url: `https://www.dice.com/jobs?q=${encoded}&location=${location}&filters.postedDate=ONE` },
     { source: 'Wellfound', url: `https://wellfound.com/jobs?keywords=${encoded}` },
     { source: 'Built In', url: `https://builtin.com/jobs?search=${encoded}` },
-    { source: 'Y Combinator', url: `https://www.ycombinator.com/jobs?query=${encoded}` }
+    { source: 'Y Combinator', url: `https://www.ycombinator.com/jobs?query=${encoded}` },
+    { source: 'Greenhouse boards', url: `https://www.google.com/search?q=${encodeURIComponent(`site:boards.greenhouse.io ${query} United States remote`)}` }
   ];
 }
 
@@ -268,4 +325,24 @@ function clean(value = '') {
     return clean(value.name || value.display_name || value.title || value.label || '');
   }
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getGreenhouseBoards() {
+  const configured = String(process.env.GREENHOUSE_BOARDS || '')
+    .split(',')
+    .map((board) => board.trim())
+    .filter(Boolean);
+  return [...new Set([...(configured.length ? configured : DEFAULT_GREENHOUSE_BOARDS)])].slice(0, 60);
+}
+
+function toCompanyName(boardToken) {
+  const overrides = {
+    doordashusa: 'DoorDash',
+    scaleai: 'Scale AI'
+  };
+  if (overrides[boardToken]) return overrides[boardToken];
+  return boardToken
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .replace(/\bAi\b/g, 'AI');
 }

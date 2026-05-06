@@ -26,6 +26,7 @@ ADZUNA_APP_ID=your_adzuna_app_id
 ADZUNA_APP_KEY=your_adzuna_app_key
 USAJOBS_API_KEY=your_usajobs_api_key
 USAJOBS_USER_AGENT=your_email@example.com
+GREENHOUSE_BOARDS=figma,openai,anthropic,stripe,reddit
 ```
 
 After Render deploys, copy the service URL, for example:
