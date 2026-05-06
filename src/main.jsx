@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { AlertCircle, Brain, Download, FileText, Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import './styles.css';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8787';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8787' : '');
 
 const emptyResume = {
   name: '',

@@ -219,6 +219,10 @@ function slugify(value) {
     .slice(0, 60) || 'tailored-resume';
 }
 
-app.listen(port, () => {
-  console.log(`Resume Tailor API running at http://127.0.0.1:${port}`);
-});
+if (!process.env.NETLIFY && process.argv[1]?.endsWith('/server/index.js')) {
+  app.listen(port, () => {
+    console.log(`Resume Tailor API running at http://127.0.0.1:${port}`);
+  });
+}
+
+export default app;
