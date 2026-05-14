@@ -182,12 +182,14 @@ Rules:
 - Do not invent employers, dates, degrees, certifications, or seniority.
 - First infer the target role/title from the job description. It may be Full Stack Developer, Software Engineer, React Developer, JavaScript Developer, Web Developer, Frontend Developer, Backend Developer, or another related title.
 - The headline, summary, role framing, skills order, and experience bullets must all consistently support that inferred target role. Do not change only the headline.
-- Aggressively rewrite the candidate's existing bullets toward the job description.
-- Add job technologies into bullets when they are plausibly connected to the existing work, such as API integrations, dashboards, frontend architecture, authentication, performance, cloud deployment, or cross-functional engineering delivery.
+- Optimize for a natural, interview-ready fit, not a perfect keyword score. Aim for roughly 80-90% alignment.
+- Do not keyword-stuff or mirror the job description verbatim. Leave out requirements that cannot be truthfully supported by the resume.
+- Rewrite the candidate's existing bullets toward the job description with selective, high-value keywords.
+- Add job technologies into bullets only when they are plausibly connected to the existing work, such as API integrations, dashboards, frontend architecture, authentication, performance, cloud deployment, or cross-functional engineering delivery.
 - If the job is Full Stack and the resume is Frontend-heavy, convert the headline and relevant frontend bullets toward Full Stack by emphasizing React/Next.js + Node.js/REST API integration, data layer collaboration, cloud readiness, and end-to-end feature ownership.
 - For any non-frontend target role, do not leave the summary or role framing as "Senior Frontend Engineer" or "Frontend Developer" when the same experience can truthfully be framed toward the target role. Preserve the original work, but change the presentation layer.
 - Replace phrases like "frontend initiatives", "frontend delivery", and "frontend architecture" with target-role-aligned language such as "software engineering initiatives", "React application architecture", "JavaScript feature delivery", "web application delivery", "full-stack web initiatives", or "end-to-end feature delivery" depending on the job title.
-- Do not merely copy original bullets. Every experience item should contain job-aligned keywords and stronger impact language.
+- Do not merely copy original bullets. Each experience item should contain natural job-aligned language and stronger impact framing, but not every bullet needs every keyword.
 - Preserve original metrics and scope, but attach them to the target stack where truthful. Example: "React.js applications serving 1M+ users" may become "React.js/Next.js front ends integrated with REST/Node.js API patterns serving 1M+ users" if the resume mentions APIs or Node.js elsewhere.
 - Keep the result truthful, concise, and interview-ready.
 - Return only valid JSON. No markdown.

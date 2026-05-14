@@ -29,10 +29,10 @@ function strengthenHeadline(headline = '', profile) {
 
 function strengthenSummary(summary = '', jobKeywords, profile) {
   const text = rewriteRoleIdentity(clean(summary), profile);
-  const stack = jobKeywords.filter((keyword) => /React|Next\.js|Node\.js|Python|AWS|PostgreSQL|DynamoDB|LLM|AI|RAG/i.test(keyword)).slice(0, 8);
+  const stack = jobKeywords.filter((keyword) => /React|Next\.js|Node\.js|Python|AWS|PostgreSQL|DynamoDB|LLM|AI|RAG/i.test(keyword)).slice(0, 5);
   const prefix = `${profile.title} with production experience across ${profile.scope}.`;
   const keywordSentence = stack.length
-    ? `Positioned for this role around ${stack.join(', ')} while preserving the candidate's original project scope and impact.`
+    ? `Positioned for this role around ${stack.join(', ')} where those skills connect naturally to the candidate's original project scope and impact.`
     : '';
 
   return [prefix, text, keywordSentence].filter(Boolean).join(' ');
@@ -335,11 +335,12 @@ function mergeSkills(primary = [], jobKeywords = [], fallbackSkills = []) {
     'Python', 'AWS', 'PostgreSQL', 'DynamoDB', 'OAuth2/OIDC', 'LLM APIs',
     'RAG', 'CI/CD', 'GitLab', 'Playwright', 'Figma'
   ];
-  return [...new Set([...preferred, ...primary, ...jobKeywords, ...fallbackSkills].map(clean).filter(Boolean))].slice(0, 34);
+  const supported = jobKeywords.filter((keyword) => primary.includes(keyword) || fallbackSkills.includes(keyword) || preferred.includes(keyword));
+  return [...new Set([...preferred, ...primary, ...supported, ...fallbackSkills].map(clean).filter(Boolean))].slice(0, 28);
 }
 
 function mergeNotes(notes = [], jobKeywords = []) {
-  const added = jobKeywords.slice(0, 12).map((keyword) => `Strengthened ${keyword} alignment in skills, summary, or experience bullets.`);
+  const added = jobKeywords.slice(0, 8).map((keyword) => `Selectively strengthened ${keyword} alignment where truthful and natural.`);
   return [...new Set([...notes, ...added].map(clean).filter(Boolean))];
 }
 

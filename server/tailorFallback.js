@@ -29,7 +29,7 @@ export function tailorResumeFallback(resumeText, jobDescription) {
     experience: buildExperience(sections.experience, jobKeywords, headline, sections.skills),
     projects: buildProjects(sections.projects, jobKeywords),
     education: sections.education,
-    atsNotes: jobKeywords.slice(0, 12).map((keyword) => `Included or emphasized ${keyword} for ATS alignment.`)
+    atsNotes: jobKeywords.slice(0, 8).map((keyword) => `Selectively emphasized ${keyword} where truthful and natural.`)
   };
 }
 
@@ -42,7 +42,8 @@ function detectKeywords(text) {
 
 function mergeSkills(current, jobKeywords) {
   const essentials = ['JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'REST', 'Git'];
-  return [...new Set([...current, ...jobKeywords, ...essentials])].slice(0, 26);
+  const supportedJobKeywords = jobKeywords.filter((keyword) => current.includes(keyword) || essentials.includes(keyword));
+  return [...new Set([...current, ...supportedJobKeywords, ...essentials])].slice(0, 22);
 }
 
 function buildHeadline(jobDescription, resumeText) {
@@ -54,13 +55,13 @@ function buildHeadline(jobDescription, resumeText) {
 }
 
 function buildSummary(headline, skills, jobKeywords) {
-  const emphasized = [...new Set([...jobKeywords, ...skills])].slice(0, 8).join(', ');
-  return `${headline} with hands-on experience building reliable, user-focused web applications. Strong fit for roles needing ${emphasized}. Able to translate product requirements into clean interfaces, maintainable APIs, and measurable delivery outcomes. Resume has been tailored to emphasize relevant keywords while preserving the candidate's original experience.`;
+  const emphasized = [...new Set([...jobKeywords, ...skills])].slice(0, 5).join(', ');
+  return `${headline} with hands-on experience building reliable, user-focused web applications. Strong fit for roles needing ${emphasized}. Able to translate product requirements into clean interfaces, maintainable APIs, and measurable delivery outcomes while preserving the candidate's original experience.`;
 }
 
 function buildExperience(lines, jobKeywords, headline, skillLines = []) {
   const chunks = chunkExperience(lines);
-  const keywords = jobKeywords.slice(0, 6).join(', ') || 'modern web technologies';
+  const keywords = jobKeywords.slice(0, 4).join(', ') || 'modern web technologies';
 
   if (!chunks.length) {
     return [{
@@ -104,13 +105,13 @@ function buildProjects(lines, jobKeywords) {
 
 function rewriteBullet(line, jobKeywords, resumeSkills = []) {
   if (!line) return '';
-  const keywordText = jobKeywords.slice(0, 4).join(', ');
+  const keywordText = jobKeywords.slice(0, 3).join(', ');
   const cleaned = line.replace(/^[\-*•]\s*/, '').trim();
   const missingButPlausible = jobKeywords
     .filter((keyword) => !resumeSkills.includes(keyword))
     .filter((keyword) => /Node\.js|API|REST|AWS|Python|PostgreSQL|DynamoDB|LLM|AI|RAG/i.test(keyword))
-    .slice(0, 2);
-  const emphasis = [...new Set([...jobKeywords.slice(0, 3), ...missingButPlausible])].join(', ');
+    .slice(0, 1);
+  const emphasis = [...new Set([...jobKeywords.slice(0, 2), ...missingButPlausible])].join(', ');
   if (!keywordText) return cleaned;
   if (cleaned.toLowerCase().includes(emphasis.toLowerCase())) return cleaned;
   return `${cleaned}; aligned with ${emphasis}.`;

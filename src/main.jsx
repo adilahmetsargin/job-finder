@@ -190,7 +190,7 @@ function App() {
               </div>
               <div className="score">
                 <span>{atsReport.score}%</span>
-                <small>keyword match</small>
+                <small>fit target 80-90</small>
               </div>
             </div>
 
@@ -381,10 +381,17 @@ function AtsPanel({ report }) {
       </div>
 
       <div className="atsMetrics">
-        <MetricCard label="Keyword coverage" value={`${report.score}%`} detail={`${report.matched.length}/${report.totalKeywords} matched`} />
+        <MetricCard label="Keyword coverage" value={`${report.score}%`} detail={report.scoreDetail} />
         <MetricCard label="Title alignment" value={report.titleAligned ? 'Strong' : 'Review'} detail={report.titleAligned ? 'Headline matches the role' : 'Tune headline for the job title'} />
         <MetricCard label="Experience signals" value={`${report.experienceHits}`} detail="Relevant bullets found" />
       </div>
+
+      {report.naturalnessWarning && (
+        <div className="naturalnessNotice">
+          <strong>Naturalness check</strong>
+          <span>{report.naturalnessWarning}</span>
+        </div>
+      )}
 
       <div className="atsColumns">
         <KeywordBlock title="Matched keywords" tone="good" items={report.matched} emptyText="No direct keyword matches yet." />
@@ -778,6 +785,8 @@ function analyzeAtsFit(resume, jobDescription) {
       totalKeywords: 0,
       titleAligned: false,
       experienceHits: 0,
+      scoreDetail: 'Aim for 80-90%',
+      naturalnessWarning: '',
       actions: ['Upload a resume and add a job description to generate an ATS analysis.']
     };
   }
@@ -794,17 +803,20 @@ function analyzeAtsFit(resume, jobDescription) {
   const summaryBonus = summaryAligned ? 0.08 : 0;
   const experienceBonus = Math.min(0.15, experienceHits * 0.025);
   const score = Math.min(100, Math.round((keywordScore * 0.65 + titleBonus + summaryBonus + experienceBonus) * 100));
-  const actions = buildAtsActions({ missing, titleAligned, summaryAligned, experienceHits });
+  const naturalnessWarning = getNaturalnessWarning(score, matched, jobKeywords);
+  const actions = buildAtsActions({ score, missing, titleAligned, summaryAligned, experienceHits });
 
   return {
     score,
-    grade: score >= 80 ? 'Strong fit' : score >= 60 ? 'Good start' : 'Needs tuning',
-    gradeTone: score >= 80 ? 'good' : score >= 60 ? 'neutral' : 'warn',
+    grade: getFitGrade(score),
+    gradeTone: getFitTone(score),
     matched,
     missing,
     totalKeywords: jobKeywords.length,
     titleAligned,
     experienceHits,
+    scoreDetail: `${matched.length}/${jobKeywords.length} matched. Ideal: 80-90%`,
+    naturalnessWarning,
     actions
   };
 }
@@ -850,11 +862,34 @@ function countExperienceHits(experience = [], keywords = []) {
   }, 0);
 }
 
-function buildAtsActions({ missing, titleAligned, summaryAligned, experienceHits }) {
+function getFitGrade(score) {
+  if (score >= 95) return 'Over-optimized';
+  if (score >= 90) return 'Strong, review tone';
+  if (score >= 80) return 'Interview-ready';
+  if (score >= 70) return 'Good start';
+  return 'Needs tuning';
+}
+
+function getFitTone(score) {
+  if (score >= 95) return 'warn';
+  if (score >= 80) return 'good';
+  if (score >= 70) return 'neutral';
+  return 'warn';
+}
+
+function getNaturalnessWarning(score, matched, jobKeywords) {
+  if (score >= 95) return 'This may read keyword-stuffed. Remove weak or repeated keywords and keep only truthful, natural experience language.';
+  if (score >= 90) return 'Strong alignment. Do a quick human-read pass before exporting so it does not feel copied from the job description.';
+  if (jobKeywords.length > 0 && matched.length === jobKeywords.length) return 'All detected keywords are present. Make sure each one is backed by real experience.';
+  return '';
+}
+
+function buildAtsActions({ score, missing, titleAligned, summaryAligned, experienceHits }) {
   const actions = [];
+  if (score >= 90) actions.push('Do not chase 100%. Keep the resume natural and remove any keyword that feels forced or unsupported.');
   if (!titleAligned) actions.push('Align the headline with the job title or closest truthful target role.');
   if (!summaryAligned) actions.push('Add 2-3 high-priority role keywords to the professional summary.');
-  if (missing.length) actions.push(`Review missing keywords: ${missing.slice(0, 6).join(', ')}.`);
+  if (missing.length) actions.push(`Review missing keywords, but only add the truthful ones: ${missing.slice(0, 6).join(', ')}.`);
   if (experienceHits < 4) actions.push('Work relevant keywords into existing experience bullets with measurable outcomes.');
   if (!actions.length) actions.push('Looks solid. Do a final truth check before exporting the PDF.');
   return actions;
